@@ -1,0 +1,3 @@
+main:
+  script: src/targets/_targets.R
+  store: tmp/targets

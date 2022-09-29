@@ -1,0 +1,10 @@
+# White list approach
+*
+!*/
+
+!README.md
+!Makefile
+!.gitignore
+!_targets.yaml
+!src/**
+!raw/**
