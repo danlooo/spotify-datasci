@@ -5,6 +5,7 @@
 !README.md
 !Makefile
 !.gitignore
+!.gitattributes
 !_targets.yaml
 !src/**
 !raw/**
