@@ -4,16 +4,7 @@
 # R targets pipeline
 #
 
-library(tidyverse)
-library(ggnewscale)
-library(targets)
-library(spotifyr)
-
-access_token <- get_spotify_access_token()
-
-list.files("src/targets", full.names = TRUE) |>
-  discard(~ str_ends(.x, "_targets.R")) |>
-  walk(source)
+source("src/targets/init.R")
 
 list(
   tar_target(terms_file, "raw/terms.txt", format = "file"),

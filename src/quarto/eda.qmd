@@ -1,0 +1,139 @@
+---
+title: "Spotify EDA"
+format: html
+editor: visual
+---
+
+```{r setup}
+
+knitr::opts_knit$set(root.dir = here::here())
+```
+
+ETL pipeline
+
+```{r}
+
+source("src/targets/init.R")
+tar_load(c("terms", "track_audio_features", "track_searches"))
+
+tar_visnetwork()
+```
+
+## Summary
+
+Spotify was queried by the following terms. Up to 50 tracks per term were retrieved.
+
+```{r}
+terms
+```
+
+Features per track
+
+```{r}
+
+tracks <-
+  track_audio_features |>
+  left_join(track_searches, by = "id")
+
+colnames(tracks)
+```
+
+Number of tracks
+
+```{r}
+tracks |>
+  count(term)
+```
+
+## Track features per term
+
+```{r}
+
+features <- c("danceability", "acousticness")
+
+tracks |>
+  select(term, features) |>
+  mutate(across(features, scale)) |>
+  pivot_longer(features) |>
+  ggplot(aes(term, value)) +
+    geom_quasirandom() +
+    geom_boxplot(outlier.size = NULL) +
+    facet_wrap(~ name, scales = "free") +
+    coord_flip()
+```
+
+(Linear euclidean) ordination
+
+```{r}
+
+features <- c("danceability", "energy", "key", "mode", "valence", "loudness", "speechiness", "acousticness", "instrumentalness", "liveness")
+  
+pca <-
+  track_audio_features |>
+  column_to_rownames("id") |>
+  select(features) |>
+  mutate(across(everything(), scale)) |>
+  filter(across(everything(), ~ ! is.na(.x))) |>
+  prcomp()
+
+tracks_pca <-
+    pca$x |>
+    as_tibble(rownames = "id") |>
+    left_join(track_audio_features, by = "id") |>
+    left_join(track_searches, by = "id")
+  
+tibble() %>%
+  ggplot(aes(x = PC1, y = PC2)) +
+  geom_point(
+    data = tracks_pca,
+    mapping = aes(color = term)
+  ) +
+  ggrepel::geom_label_repel(
+    data = pca_clusters,
+    mapping = aes(label = term, color = term)
+  ) +
+  guides(color = FALSE) +
+  ggnewscale::new_scale_color() +
+  geom_segment(
+    data = pca$rotation %>% as_tibble(rownames = "feature"),
+    mapping = aes(x = 0, y = 0, xend = max(abs(pca$x[,1])) * PC1, yend = max(abs(pca$x[,2])) * PC2),
+    arrow = arrow()
+  ) +
+  ggrepel::geom_label_repel(
+    data = pca$rotation %>% as_tibble(rownames = "feature"),
+    mapping = aes(label = feature, x = max(abs(pca$x[,1])) * PC1, y = max(abs(pca$x[,2])) * PC2)
+  ) +
+  labs(title = "The Space of Music")
+```
+
+Sanity checks
+
+-   mozart is associated with acousticness
+
+-   ACDC is associated with loudness
+
+Some features are highly correlated, suggesting redundancy:
+
+```{r}
+tracks |>
+  ggplot(aes(danceability, loudness)) +
+    geom_point() +
+    stat_smooth(method = "lm") +
+    stat_cor()
+```
+
+Indeed, lots of features were significantly correlated after FDR adjustment:
+
+```{r}
+
+features <- c("danceability", "energy", "key", "mode", "valence", "loudness", "speechiness", "acousticness", "instrumentalness", "liveness")
+
+tracks |>
+  select(features) |>
+  as.matrix() |>
+  Hmisc::rcorr() |>
+  broom::tidy() |>
+  ungroup() |>
+  mutate(q.value = p.value |> p.adjust(method = "fdr")) |>
+  filter(q.value < 0.05 & abs(estimate) > 0.2)
+```
