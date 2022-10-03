@@ -4,6 +4,7 @@ all:
 	docker container rm -f spotify_datasci
 	docker run \
 		--rm \
+		-p 8787:8787 \
 		--name spotify_datasci \
 		--volume ${PWD}:/home/rstudio \
 		--env-file .env \
