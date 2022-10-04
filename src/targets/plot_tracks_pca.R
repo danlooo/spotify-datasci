@@ -3,6 +3,7 @@ plot_tracks_pca <- function(track_audio_features, track_searches) {
   
   pca <-
     track_audio_features |>
+    filter(! is.na(id)) |>
     column_to_rownames("id") |>
     select(features) |>
     mutate(across(everything(), scale)) |>
