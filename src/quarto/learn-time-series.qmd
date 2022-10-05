@@ -1,0 +1,147 @@
+---
+title: "learn_time_series"
+format: html
+editor: visual
+---
+
+See [this tutorial](https://keras.io/examples/timeseries/timeseries_classification_from_scratch/)
+
+## Setup
+
+```{python}
+
+import keras
+from tensorflow import keras
+import numpy as np
+import matplotlib.pyplot as plt
+```
+
+## Load data
+
+```{python}
+
+def readucr(filename):
+    data = np.loadtxt(filename, delimiter="\t")
+    y = data[:, 0]
+    x = data[:, 1:]
+    return x, y.astype(int)
+
+
+root_url = "https://raw.githubusercontent.com/hfawaz/cd-diagram/master/FordA/"
+
+x_train, y_train = readucr(root_url + "FordA_TRAIN.tsv")
+x_test, y_test = readucr(root_url + "FordA_TEST.tsv")
+```
+
+## Visualize
+
+```{python}
+classes = np.unique(np.concatenate((y_train, y_test), axis=0))
+
+plt.figure()
+for c in classes:
+    c_x_train = x_train[y_train == c]
+    plt.plot(c_x_train[0], label="class " + str(c))
+plt.legend(loc="best")
+plt.show()
+```
+
+## Normalize data
+
+```{python}
+x_train = x_train.reshape((x_train.shape[0], x_train.shape[1], 1))
+x_test = x_test.reshape((x_test.shape[0], x_test.shape[1], 1))
+num_classes = len(np.unique(y_train))
+idx = np.random.permutation(len(x_train))
+x_train = x_train[idx]
+y_train = y_train[idx]
+y_train[y_train == -1] = 0
+y_test[y_test == -1] = 0
+```
+
+Dimensions of numpy arrays:
+
+```{python}
+x_train.shape
+y_train.shape
+```
+
+3601 samples, 500 time points, 1 feature per sample
+
+## Build model
+
+```{python}
+
+from keras.layers import Input, Conv1D, BatchNormalization, ReLU, GlobalAveragePooling1D, Dense
+from keras.models import Model
+
+input_shape=x_train.shape[1:]
+
+model = keras.Sequential(
+    [
+      Input(input_shape),
+      Conv1D(filters=64, kernel_size=3, padding="same"),
+      BatchNormalization(),
+      ReLU(),
+      Conv1D(filters=64, kernel_size=3, padding="same"),
+      BatchNormalization(),
+      ReLU(),
+      GlobalAveragePooling1D(),
+      Dense(num_classes, activation="softmax")
+    ]
+)
+
+model.summary()
+```
+
+```{python}
+epochs = 50
+batch_size = 32
+
+callbacks = [
+    keras.callbacks.ModelCheckpoint(
+        "best_model.h5", save_best_only=True, monitor="val_loss"
+    ),
+    keras.callbacks.ReduceLROnPlateau(
+        monitor="val_loss", factor=0.5, patience=20, min_lr=0.0001
+    ),
+    keras.callbacks.EarlyStopping(monitor="val_loss", patience=50, verbose=1),
+]
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["sparse_categorical_accuracy"],
+)
+history = model.fit(
+    x_train,
+    y_train,
+    batch_size=batch_size,
+    epochs=epochs,
+    callbacks=callbacks,
+    validation_split=0.2,
+    verbose=1,
+)
+```
+
+## Evaluate model
+
+```{python}
+model = keras.models.load_model("best_model.h5")
+
+test_loss, test_acc = model.evaluate(x_test, y_test)
+
+print("Test accuracy", test_acc)
+print("Test loss", test_loss)
+```
+
+```{python}
+metric = "sparse_categorical_accuracy"
+plt.figure()
+plt.plot(history.history[metric])
+plt.plot(history.history["val_" + metric])
+plt.title("model " + metric)
+plt.ylabel(metric, fontsize="large")
+plt.xlabel("epoch", fontsize="large")
+plt.legend(["train", "val"], loc="best")
+plt.show()
+```

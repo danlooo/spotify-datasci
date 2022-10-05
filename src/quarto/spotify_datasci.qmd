@@ -1,0 +1,358 @@
+---
+title: "Dat Science with Spotify: Predicing Genre"
+format:
+  html: 
+    toc: true
+editor: visual
+execute:
+  freeze: auto
+  cache: true
+---
+
+```{r setup}
+knitr::opts_knit$set(root.dir = here::here())
+```
+
+ETL pipeline
+
+```{r}
+source("src/targets/init.R")
+tar_load(c("terms", "track_audio_features", "track_selected_audio_features", "track_audio_analyses", "track_train_test_split", "track_searches", "track_pitches", "track_valid"))
+
+tar_visnetwork()
+```
+
+## Summary
+
+Spotify was queried by the following terms. Up to 50 tracks per term were retrieved.
+
+```{r}
+terms
+```
+
+Features per track
+
+```{r}
+tracks <-
+  track_audio_features |>
+  left_join(track_searches, by = "id") |>
+  mutate(term = factor(term))
+
+colnames(tracks)
+```
+
+Number of tracks
+
+```{r}
+nrow(tracks)
+```
+
+Split train/ test data to not bias any analysis. Stratify by term to ensure a balanced data set.
+
+```{r}
+tar_load(track_train_test_split)
+
+tracks_train <- tracks |> inner_join(track_train_test_split) |> filter(is_train)
+tracks_test <- tracks |> anti_join(tracks_train)
+```
+
+## Track features per term
+
+```{r}
+features <- c("danceability", "acousticness")
+
+tracks_train |>
+  select(term, features) |>
+  mutate(across(features, scale)) |>
+  pivot_longer(features) |>
+  ggplot(aes(term, value)) +
+    geom_quasirandom() +
+    geom_boxplot(outlier.size = NULL, width = 0.5) +
+    facet_wrap(~ name, scales = "free") +
+    coord_flip()
+```
+
+-   Techno songs are high in danceability and low in acousticness
+
+    (Linear Euclidean) ordination biplot to show at all numeric features at once:
+
+```{r}
+pca <-
+  track_audio_features |>
+  semi_join(tracks_train) |>
+  column_to_rownames("id") |>
+  select(track_selected_audio_features) |>
+  mutate(across(everything(), scale)) |>
+  filter(if_any(everything(), ~ ! is.na(.x))) |>
+  prcomp()
+
+tracks_pca <-
+    pca$x |>
+    as_tibble(rownames = "id") |>
+    left_join(track_audio_features, by = "id") |>
+    left_join(track_searches, by = "id")
+
+# get medoids
+track_clusters <-
+  tracks_pca |>
+  group_by(term) |>
+  summarise(across(c(PC1, PC2), median))
+
+tibble() |>
+  ggplot(aes(x = PC1, y = PC2, color = group)) +
+  geom_text(
+     data = track_clusters |> mutate(group = "term"),
+     mapping = aes(label = term)
+  ) +
+  geom_text(
+     data = pca$rotation |> as_tibble(rownames = "feature") |> mutate(group = "feature"),
+     mapping = aes(label = feature)
+  )
+```
+
+More detailed biplot:
+
+```{r}
+tibble() |>
+  ggplot(aes(x = PC1, y = PC2)) +
+  geom_point(
+    data = tracks_pca,
+    mapping = aes(color = term)
+  ) +
+  ggrepel::geom_label_repel(
+     data = track_clusters,
+     mapping = aes(label = term, color = term)
+  ) +
+  guides(color = FALSE) +
+  ggnewscale::new_scale_color() +
+  geom_segment(
+    data = pca$rotation |> as_tibble(rownames = "feature"),
+    mapping = aes(x = 0, y = 0, xend = max(abs(pca$x[,1])) * PC1, yend = max(abs(pca$x[,2])) * PC2),
+    arrow = arrow()
+  ) +
+  ggrepel::geom_label_repel(
+    data = pca$rotation |> as_tibble(rownames = "feature"),
+    mapping = aes(label = feature, x = max(abs(pca$x[,1])) * PC1, y = max(abs(pca$x[,2])) * PC2)
+  )
+```
+
+Sanity checks
+
+-   mozart is associated with acousticness
+
+-   ACDC is associated with loudness
+
+## Predicting the term based on the musical features
+
+```{r}
+summary(pca)$importance["Cumulative Proportion","PC2"]
+```
+
+Almost half of the variance can be explained by the first principal components, motivating the prediction of the terms based on the features. These features were also significantly different across the terms:
+
+```{r}
+features |>
+  paste0(collapse = "+") |>
+  paste0("~ term") |>
+  lm(data = tracks) |>
+  anova()
+```
+
+```{python}
+import pandas as pd
+import numpy as np
+import keras
+from sklearn.preprocessing import LabelBinarizer
+import random
+
+random.seed(1337)
+
+valid_tracks = r.track_valid # can not use with @ in query directly
+data = (
+  r.track_audio_features
+  .query("id in @valid_tracks") # ensure all features are available
+  .merge(r.track_train_test_split, on = "id")
+  .merge(r.track_searches, on = "id")
+  .sample(frac=1) # shuffle rows to help DNN fitting
+)
+
+train_X = data.query("is_train").set_index("id")[r.track_selected_audio_features]
+train_Y = data.query("is_train").term
+labeller = LabelBinarizer().fit(train_Y)
+train_Y_one_hot = labeller.transform(train_Y)
+
+test_X = data.query("not is_train").set_index("id")[r.track_selected_audio_features]
+test_Y = data.query("not is_train").term
+test_Y_one_hot = labeller.transform(test_Y)
+```
+
+## Model 1: Linear
+
+```{python}
+from sklearn.linear_model import RidgeClassifier
+
+model1 = RidgeClassifier().fit(train_X, train_Y)
+model1.score(test_X, test_Y)
+```
+
+This is a high baseline accuracy for a robust model.
+
+```{python}
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
+cm = confusion_matrix(test_Y, model1.predict(test_X), labels=model1.classes_)
+ConfusionMatrixDisplay(confusion_matrix=cm,display_labels=model1.classes_).plot()
+plt.show()
+```
+
+Some techno tracks are wrongly classified as rock music. Both are high in loudness and energy. Both terms are also next to each other in the PCA biplot.
+
+## Model 2: MLP
+
+```{python}
+from keras.layers import Input, Dense, Dropout
+import random
+
+random.seed(1337)
+
+model2 = keras.Sequential(
+    [
+        Input(shape=(len(r.track_selected_audio_features),)),
+        Dense(100, activation="relu"),
+        Dropout(0.2),
+        Dense(100, activation="relu"), 
+        Dense(train_Y_one_hot.shape[1], activation="softmax")
+    ]
+)
+model2.build()
+model2.compile(
+    optimizer=keras.optimizers.SGD(),
+    loss="categorical_crossentropy",
+    metrics=[keras.metrics.CategoricalAccuracy(), keras.metrics.TopKCategoricalAccuracy(k=2)]
+)
+model2.summary()
+
+model2.fit(train_X, train_Y_one_hot, epochs = 100, verbose = 0)
+```
+
+Performance on test data set:
+
+```{python}
+model2.evaluate(test_X, test_Y_one_hot)
+```
+
+The model is much more complex but has a very similar test accuracy. Either one would pick the robust linear model instead, or one would use different features instead.
+
+## Model 3: CNN
+
+Some features are highly correlated, suggesting redundancy, e.g. :
+
+```{r}
+# tracks |>
+#   ggplot(aes(danceability, loudness)) +
+#     geom_point() +
+#     stat_smooth(method = "lm") +
+#     stat_cor()
+```
+
+Indeed, lots of features were significantly correlated after FDR adjustment:
+
+```{r}
+tracks |>
+  select(track_selected_audio_features) |>
+  as.matrix() |>
+  Hmisc::rcorr() |>
+  broom::tidy() |>
+  ungroup() |>
+  mutate(q.value = p.value |> p.adjust(method = "fdr")) |>
+  filter(q.value < 0.05 & abs(estimate) > 0.2) |>
+  arrange(-abs(estimate)) |>
+  unite(col = comparision, column1, column2, sep = " vs. ") |>
+  head(10) |>
+  ggplot(aes(comparision, estimate)) +
+    geom_col() +
+    coord_flip() +
+    labs(y = "Pearson correlation")
+```
+
+Music is composed of shorter and longer patterns. We can make use of the temporal property by doing convolutions on the time axis while using loudness of pitch frequencies as features.
+
+[Spotify audio analysis](https://developer.spotify.com/community/showcase/spotify-audio-analysis/) separates the track into many segments and calculates the loudness for each of the 12 pitches (half steps) of the scale.
+
+```{r}
+track_audio_analyses$audio_analysis[[1]]$segments$pitches[1][[1]]
+```
+
+First, only use intensity scores of note c to get a 2D data frame:
+
+```{r}
+c_pitches <-
+  track_pitches |>
+  filter(id %in% track_valid) |>
+  unnest(pitches) |>
+  group_by(id) |>
+  mutate(segment = row_number()) |>
+  select(id, segment, V1) |>
+  pivot_wider(names_from = segment, values_from = V1)
+c_pitches
+
+c_pitches |>
+  left_join(track_train_test_split) |>
+  filter(is_train) |>
+  select(-is_train) |>
+  pivot_longer(-id, names_to = "segment") |>
+  left_join(track_searches) |>
+  type_convert() |>
+  ggplot(aes(segment, value)) +
+    geom_density_2d_filled() +
+    facet_wrap(~term, ncol = 1)
+```
+
+C pitch is very common in mozart songs at all times.
+
+```{python}
+from keras.layers import Conv1D, BatchNormalization, ReLU, GlobalAveragePooling1D
+
+data = r.c_pitches.merge(r.track_train_test_split).set_index("id")
+n_features = 1 # just the note c
+n_timesteps = data.shape[1] - 1
+n_classes = len(set(train_Y))
+
+train_X = data.query("is_train").drop(columns = "is_train")
+train_X = train_X.to_numpy().reshape((train_X.shape[0], n_timesteps, n_features))
+
+test_X = data.query("not is_train").drop(columns = "is_train")
+test_X = test_X.to_numpy().reshape((test_X.shape[0], n_timesteps, n_features))
+
+random.seed(1337)
+
+model3 = keras.Sequential(
+    [
+      Input(shape=train_X.shape[1:]),
+      Conv1D(filters=256, kernel_size=3, padding="same"),
+      BatchNormalization(),
+      ReLU(),
+      Conv1D(filters=128, kernel_size=3, padding="same"),
+      BatchNormalization(),
+      ReLU(),
+      GlobalAveragePooling1D(),
+      Dense(n_classes, activation="softmax")
+    ]
+)
+model3.compile(
+    optimizer=keras.optimizers.SGD(),
+    loss="categorical_crossentropy",
+    metrics=[keras.metrics.CategoricalAccuracy(), keras.metrics.TopKCategoricalAccuracy(k=2)]
+)
+model3.summary()
+callbacks = [
+    keras.callbacks.ModelCheckpoint("tmp/model3.best.h5", save_best_only=True, monitor="categorical_accuracy"),
+    keras.callbacks.EarlyStopping(monitor="categorical_accuracy", patience=5, verbose=1),
+    keras.callbacks.CSVLogger("tmp/model3.fit.csv", append=True, separator=","),
+    keras.callbacks.TensorBoard(log_dir="tmp/tensorbard")
+]
+model3.build()
+history = model3.fit(train_X, train_Y_one_hot, epochs = 5, verbose = 0, callbacks = callbacks)
+model3.evaluate(test_X, test_Y_one_hot)
+```

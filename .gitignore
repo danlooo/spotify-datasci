@@ -9,3 +9,4 @@
 !_targets.yaml
 !src/**
 !raw/**
+.Rproj.user

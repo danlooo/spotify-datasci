@@ -14,7 +14,7 @@ library(broom)
 library(targets)
 library(spotifyr)
 
-access_token <- get_spotify_access_token()
+safely(get_spotify_access_token)()
 
 list.files("src/targets", full.names = TRUE) |>
   discard(~ str_ends(.x, "_targets.R")) |>
