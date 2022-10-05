@@ -11,6 +11,7 @@ execute:
 
 ```{r setup}
 knitr::opts_knit$set(root.dir = here::here())
+options(warn=-1)
 ```
 
 ETL pipeline
@@ -249,11 +250,11 @@ The model is much more complex but has a very similar test accuracy. Either one 
 Some features are highly correlated, suggesting redundancy, e.g. :
 
 ```{r}
-# tracks |>
-#   ggplot(aes(danceability, loudness)) +
-#     geom_point() +
-#     stat_smooth(method = "lm") +
-#     stat_cor()
+tracks |>
+  ggplot(aes(danceability, loudness)) +
+    geom_point() +
+    stat_smooth(method = "lm") +
+    stat_cor()
 ```
 
 Indeed, lots of features were significantly correlated after FDR adjustment:
@@ -295,7 +296,6 @@ c_pitches <-
   mutate(segment = row_number()) |>
   select(id, segment, V1) |>
   pivot_wider(names_from = segment, values_from = V1)
-c_pitches
 
 c_pitches |>
   left_join(track_train_test_split) |>
