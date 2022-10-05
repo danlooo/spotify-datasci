@@ -1,5 +1,5 @@
 ---
-title: "Dat Science with Spotify: Predicing Genre"
+title: "Data Science with Spotify: Predicing Genre"
 format:
   html: 
     toc: true
@@ -17,7 +17,7 @@ options(warn=-1)
 ETL pipeline
 
 ```{r}
-source("src/targets/init.R")
+source("src/init.R")
 tar_load(c("terms", "track_audio_features", "track_selected_audio_features", "track_audio_analyses", "track_train_test_split", "track_searches", "track_pitches", "track_valid"))
 
 tar_visnetwork()

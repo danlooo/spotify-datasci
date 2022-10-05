@@ -4,7 +4,7 @@
 # R targets pipeline
 #
 
-source("src/targets/init.R")
+source("src/init.R")
 
 list(
   tar_target(track_selected_audio_features, c(
