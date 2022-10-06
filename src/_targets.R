@@ -77,5 +77,77 @@ list(
       filter(! is.na(audio_analysis)) |>
       inner_join(track_audio_features) |>
       pull(id)
+  }),
+  tar_target(cnn_data, {
+    train_samples <-
+      track_train_test_split |>
+      filter(id %in% track_valid) |>
+      filter(is_train) |>
+      pull(id)
+    
+    x_long <-
+      track_pitches |>
+      filter(id %in% train_samples) |>
+      unnest(pitches) |>
+      group_by(id) |>
+      mutate(step = row_number()) |>
+      pivot_longer(-c(id, step)) |>
+      # normalization
+      group_by(id, step) |>
+      mutate(value = value / sum(value)) |>
+      arrange(id, step, name)
+    
+    x_array <-
+      x_long |>
+      pull(value) |>
+      array(dim = c(
+        x_long$id |> unique() |> length(),
+        x_long$step |> unique() |> length(),
+        x_long$name |> unique() |> length()
+      ))
+    
+    y <-
+      tibble(id = x_long$id |> unique()) |>
+      filter(id %in% train_samples) |>
+      left_join(track_searches) |>
+      select(id, term) |>
+      mutate(yes = 1) |>
+      complete(id, term, fill = list(yes = 0)) |>
+      pivot_wider(names_from = term, values_from = yes) |>
+      column_to_rownames("id") |>
+      as.matrix()
+    
+    list(train_x = x_array, train_y = y)
+  }),
+  tar_target(cnn, {
+    model <-
+      keras_model_sequential(input_shape = dim(cnn_data$train_x)[2:3]) |>
+      layer_conv_1d(filters = 128, kernel_size = 3) |>
+      layer_batch_normalization() |>
+      layer_conv_1d(filters = 64, kernel_size = 3) |>
+      layer_batch_normalization() |>
+      layer_conv_1d(filters = 32, kernel_size = 3) |>
+      layer_batch_normalization() |>
+      layer_global_average_pooling_1d() |>
+      layer_dense(units = ncol(cnn_data$train_y), activation = "softmax")
+    
+    callbacks <- list(
+      callback_early_stopping(patience = 5, min_delta = 0.01, monitor = "val_loss"),
+      callback_tensorboard(log_dir = "tmp/tensorboard"),
+      callback_model_checkpoint(save_best_only = TRUE, filepath = "tmp/best_model.h5"),
+      callback_csv_logger("tmp/train_history.csv", separator = ",")
+    )
+    
+    model |>
+      compile(loss = "categorical_crossentropy", metrics = "accuracy") |>
+      fit(
+        x = cnn_data$train_x,
+        y = cnn_data$train_y,
+        callbacks = callbacks,
+        epochs = 200,
+        verbose = 0
+      )
+    
+    model
   })
 )

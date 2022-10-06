@@ -1,6 +1,8 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
-.Random.seed|object|97161300abe694bb|||||||||||||||
+.Random.seed|object|0cccaa26f86f7700|||||||||||||||
 access_token|object|b8b609f9f75a7668|||||||||||||||
+cnn|stem|1ec36ea5fd788e93|2a361f1ea601c0c5|2257931b151bc046|60168758||t19271.6933615649s|cac6cfc2549f5b57|1932|rds|local|vector|||14.106||
+cnn_data|stem|cd06b61aef3b8bca|2115fa8da402eeb7|0e062c1881f5519b|-344626950||t19271.6739468552s|14dd35994f530cb5|29899857|rds|local|vector|||27.241||
 features|object|a40f5cf57270f726|||||||||||||||
 foo|stem|036dac1247a16961|9d38591f4e970354|ef46db3751d8e999|596015325||t19264.4740214302s|a96c250e4b19e03e|54|rds|local|vector|||0.002||
 pca|object|0ca8c36028786866|||||||||||||||
@@ -1821,3 +1823,4 @@ tracks|object|ef93de0570c4eae4|||||||||||||||
 tracks_pca|object|fe7747fd699c617d|||||||||||||||
 tracks_test|object|1c8481b04f26a847|||||||||||||||
 tracks_train|object|0733185002ae00a1|||||||||||||||
+.Random.seed|object|62b8f5668dc8b595
