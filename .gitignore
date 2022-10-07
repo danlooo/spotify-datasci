@@ -1,14 +1,2 @@
-# White list approach
-*
-!*/
-
-!README.md
-!Makefile
-!.gitignore
-!.gitattributes
-!_targets.yaml
-!src/docker/**
-!src/*.R
-!src/*.qmd
-!raw/**
-.Rproj.user
+tmp/**
+.**
