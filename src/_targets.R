@@ -4,7 +4,23 @@
 # R targets pipeline
 #
 
-source("src/init.R")
+library(tidyverse)
+library(ggnewscale)
+library(ggrepel)
+library(ggbeeswarm)
+library(ggpubr)
+
+library(broom)
+library(targets)
+library(spotifyr)
+library(reticulate)
+library(keras)
+library(tensorflow)
+
+keras::use_condaenv("datasci", conda = "/home/daniel/miniconda3/bin/conda")
+options(clustermq.scheduler = "multicore")
+safely(get_spotify_access_token)()
+theme_set(theme_minimal())
 
 list(
   tar_target(track_selected_audio_features, c(
@@ -119,24 +135,36 @@ list(
     
     list(train_x = x_array, train_y = y)
   }),
-  tar_target(cnn, {
-    model <-
-      keras_model_sequential(input_shape = dim(cnn_data$train_x)[2:3]) |>
-      layer_conv_1d(filters = 128, kernel_size = 3) |>
-      layer_batch_normalization() |>
-      layer_conv_1d(filters = 64, kernel_size = 3) |>
-      layer_batch_normalization() |>
-      layer_conv_1d(filters = 32, kernel_size = 3) |>
-      layer_batch_normalization() |>
-      layer_global_average_pooling_1d() |>
-      layer_dense(units = ncol(cnn_data$train_y), activation = "softmax")
-    
-    callbacks <- list(
-      callback_early_stopping(patience = 5, min_delta = 0.01, monitor = "val_loss"),
-      callback_tensorboard(log_dir = "tmp/tensorboard"),
-      callback_model_checkpoint(save_best_only = TRUE, filepath = "tmp/best_model.h5"),
-      callback_csv_logger("tmp/train_history.csv", separator = ",")
+  tar_target(model_archs, {
+    list(
+      "base" = function() {
+        keras_model_sequential(input_shape = dim(cnn_data$train_x)[2:3]) |>
+          layer_flatten() |>
+          layer_dense(units = 3, activation = "relu") |>
+          layer_dense(units = ncol(cnn_data$train_y), activation = "softmax")
+      },
+      "cnn1" = function() {
+        keras_model_sequential(input_shape = dim(cnn_data$train_x)[2:3]) |>
+          layer_conv_1d(filters = 64, kernel_size = 5) |>
+          layer_activation_relu() |>
+          layer_batch_normalization() |>
+          layer_global_average_pooling_1d() |>
+          layer_dense(units = 32) |>
+          layer_dense(units = ncol(cnn_data$train_y), activation = "softmax")
+      }
     )
+  }),
+  tar_target(models, {
+    file <- str_glue("tmp/best_model/{tar_name()}.h5")
+
+    callbacks <- list(
+      callback_early_stopping(patience = 50, min_delta = 0.0001, monitor = "accuracy"),
+      callback_tensorboard(log_dir = str_glue("tmp/tensorboard/{tar_name()}")),
+      callback_model_checkpoint(save_best_only = TRUE, filepath = file, monitor = "accuracy"),
+      callback_csv_logger(str_glue("tmp/train_history/{tar_name()}.csv"), separator = ",")
+    )
+    
+    model <- model_archs[[1]]() 
     
     model |>
       compile(loss = "categorical_crossentropy", metrics = "accuracy") |>
@@ -144,10 +172,24 @@ list(
         x = cnn_data$train_x,
         y = cnn_data$train_y,
         callbacks = callbacks,
-        epochs = 200,
-        verbose = 0
+        epochs = 250,
+        verbose = 0,
+        validation_split = 0.2
       )
-    
-    model
-  })
+
+    file
+  },
+  pattern = map(model_archs),
+  format = "file"
+  ),
+  tar_target(evaluations, {
+    tibble(
+      name = names(model_archs),
+      evaluation = models |> load_model_hdf5() |> evaluate(cnn_data$train_x, cnn_data$train_y) |> as_tibble(rownames = "metric")
+    ) |>
+      unnest(evaluation) |>
+      pivot_wider(names_from = metric, values_from = value)
+  },
+  pattern = map(model_archs, models)
+  )
 )
