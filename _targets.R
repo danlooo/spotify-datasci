@@ -19,6 +19,8 @@ library(tensorflow)
 
 keras::use_condaenv("datasci", conda = "/home/daniel/miniconda3/bin/conda")
 options(clustermq.scheduler = "multicore")
+
+dotenv::load_dot_env()
 safely(get_spotify_access_token)()
 theme_set(theme_minimal())
 
@@ -28,7 +30,7 @@ list(
     "speechiness", "acousticness", "instrumentalness", "liveness"
   )),
   tar_target(terms, c("techno", "rock", "jazz", "classical")),
-  tar_target(track_searches_offsets, seq(0, 150, by = 50)),
+  tar_target(track_searches_offsets, seq(0, 850, by = 50)),
   tar_target(
     name = track_searches,
     command = {
@@ -89,63 +91,98 @@ list(
     pattern = map(track_audio_analyses)
   ),
   tar_target(valid_tracks, {
+    pitch_error_tracks <-
+      track_pitches |>
+      unnest(pitches) |>
+      count(id) |>
+      filter(n != 800)
+
     ambigious_tracks <-
       track_searches |>
       count(id) |>
       filter(n > 1)
-    
+
     # tracks having all features available
     track_audio_analyses |>
       filter(!is.na(audio_analysis)) |>
       inner_join(track_audio_features) |>
       anti_join(ambigious_tracks) |>
+      anti_join(pitch_error_tracks) |>
       pull(id) |>
       unique()
   }),
   tar_target(model_data, {
-    train_samples <-
+    valid_train_samples <-
       track_train_test_split |>
-      filter(id %in% valid_tracks) |>
       filter(is_train) |>
       pull(id) |>
-      unique()
+      intersect(valid_tracks)
+
+    valid_test_samples <-
+      track_train_test_split |>
+      filter(!is_train) |>
+      pull(id) |>
+      intersect(valid_tracks)
 
     x_long <-
       track_pitches |>
-      filter(id %in% train_samples) |>
+      filter(id %in% valid_tracks) |>
       unnest(pitches) |>
       group_by(id) |>
       mutate(step = row_number()) |>
-      pivot_longer(-c(id, step)) |>
-      filter(step <= 800)
+      pivot_longer(-c(id, step))
 
-    x_array <-
+    x_train_array <-
       x_long |>
+      filter(id %in% valid_train_samples) |>
       pull(value) |>
       array(dim = c(
-        x_long$id |> unique() |> length(),
+        valid_train_samples |> length(),
         x_long$step |> unique() |> length(),
         x_long$name |> unique() |> length()
       ))
 
-    y <-
+    x_test_array <-
+      x_long |>
+      filter(id %in% valid_test_samples) |>
+      pull(value) |>
+      array(dim = c(
+        valid_test_samples |> length(),
+        x_long$step |> unique() |> length(),
+        x_long$name |> unique() |> length()
+      ))
+
+    y_train <-
       tibble(id = x_long$id |> unique()) |>
-      filter(id %in% train_samples) |>
+      filter(id %in% valid_train_samples) |>
       left_join(track_searches) |>
       select(id, term) |>
       mutate(yes = 1) |>
       complete(id, term, fill = list(yes = 0)) |>
-      
       # normalization due to multiple mentioning
       group_by(id) |>
       mutate(yes = yes / sum(yes)) |>
       ungroup() |>
-      
       pivot_wider(names_from = term, values_from = yes) |>
       column_to_rownames("id") |>
       as.matrix()
 
-    list(train_x = x_array, train_y = y)
+    y_test <-
+      tibble(id = x_long$id |> unique()) |>
+      filter(id %in% valid_test_samples) |>
+      left_join(track_searches) |>
+      select(id, term) |>
+      mutate(yes = 1) |>
+      complete(id, term, fill = list(yes = 0)) |>
+      # normalization due to multiple mentioning
+      group_by(id) |>
+      mutate(yes = yes / sum(yes)) |>
+      ungroup() |>
+      pivot_wider(names_from = term, values_from = yes) |>
+      column_to_rownames("id") |>
+      as.matrix()
+
+    list(train_x = x_train_array, train_y = y_train, test_x = x_test_array, test_y = y_test)
   }),
   tar_target(model_archs, {
     list(
@@ -157,7 +194,9 @@ list(
       },
       "lstm1" = function() {
         keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
-          layer_lstm(units = 64) |>
+          layer_conv_1d(filters = 64, kernel_size = 5) |>
+          layer_max_pooling_1d() |>
+          layer_lstm(units = 16) |>
           layer_dense(units = ncol(model_data$train_y), activation = "softmax")
       },
       "cnn1" = function() {
@@ -261,7 +300,7 @@ list(
       file <- str_glue("tmp/best_model/{tar_name()}.h5")
 
       callbacks <- list(
-        callback_early_stopping(patience = 50, min_delta = 0.0001, monitor = "val_accuracy"),
+        callback_early_stopping(patience = 20, min_delta = 0.01, monitor = "accuracy", verbose = 1),
         callback_tensorboard(log_dir = str_glue("tmp/tensorboard/{tar_name()}")),
         callback_model_checkpoint(save_best_only = TRUE, filepath = file, monitor = "val_accuracy"),
         callback_csv_logger(str_glue("tmp/train_history/{tar_name()}.csv"), separator = ",")
