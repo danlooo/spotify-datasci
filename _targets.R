@@ -189,105 +189,24 @@ list(
       "base" = function() {
         keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
           layer_flatten() |>
-          layer_dense(units = 3, activation = "relu") |>
-          layer_dense(units = ncol(model_data$train_y), activation = "softmax")
-      },
-      "lstm1" = function() {
-        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
-          layer_conv_1d(filters = 64, kernel_size = 5) |>
-          layer_max_pooling_1d() |>
-          layer_lstm(units = 16) |>
-          layer_dense(units = ncol(model_data$train_y), activation = "softmax")
-      },
-      "cnn1" = function() {
-        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
-          layer_conv_1d(filters = 64, kernel_size = 5) |>
+          layer_dense(units = 4, activation = "relu") |>
           layer_activation_relu() |>
-          layer_batch_normalization() |>
-          layer_global_average_pooling_1d() |>
+          layer_dense(units = ncol(model_data$train_y), activation = "softmax")
+      },
+      "lstm" = function() {
+        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
+          layer_conv_1d(filters = 1, kernel_size = 5) |>
+          layer_lstm(units = 32) |>
           layer_dense(units = 32) |>
-          layer_dense(units = ncol(model_data$train_y), activation = "softmax")
-      },
-      "cnn2" = function() {
-        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
-          layer_conv_1d(filters = 512, kernel_size = 5) |>
           layer_activation_relu() |>
-          layer_batch_normalization() |>
-          layer_conv_1d(filters = 64, kernel_size = 5) |>
-          layer_activation_relu() |>
-          layer_batch_normalization() |>
-          layer_global_average_pooling_1d() |>
-          layer_dense(units = 32) |>
-          layer_dense(units = ncol(model_data$train_y), activation = "softmax")
-      },
-      "cnn3" = function() {
-        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
-          layer_conv_1d(filters = 16, kernel_size = 3) |>
-          layer_activation_relu() |>
-          layer_batch_normalization() |>
-          layer_global_average_pooling_1d() |>
           layer_dense(units = ncol(model_data$train_y), activation = "softmax")
       },
       "cnn4" = function() {
         keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
-          layer_conv_1d(filters = 16, kernel_size = 3) |>
+          layer_conv_1d(filters = 12, kernel_size = 3) |>
           layer_activation_relu() |>
           layer_batch_normalization() |>
-          layer_conv_1d(filters = 16, kernel_size = 3) |>
-          layer_activation_relu() |>
-          layer_batch_normalization() |>
-          layer_global_average_pooling_1d() |>
-          layer_dense(units = ncol(model_data$train_y), activation = "softmax")
-      },
-      "cnn5" = function() {
-        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
-          layer_conv_1d(filters = 16, kernel_size = 65) |>
-          layer_activation_relu() |>
-          layer_batch_normalization() |>
-          layer_conv_1d(filters = 16, kernel_size = 65) |>
-          layer_activation_relu() |>
-          layer_batch_normalization() |>
-          layer_global_average_pooling_1d() |>
-          layer_dense(units = ncol(model_data$train_y), activation = "softmax")
-      },
-      "cnn6" = function() {
-        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
-          layer_conv_1d(filters = 32, kernel_size = 3) |>
-          layer_activation_relu() |>
-          layer_batch_normalization() |>
-          layer_conv_1d(filters = 32, kernel_size = 3) |>
-          layer_activation_relu() |>
-          layer_batch_normalization() |>
-          layer_global_average_pooling_1d() |>
-          layer_dense(units = ncol(model_data$train_y), activation = "softmax")
-      },
-      "cnn7" = function() {
-        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
-          layer_conv_1d(filters = 8, kernel_size = 3) |>
-          layer_activation_relu() |>
-          layer_batch_normalization() |>
-          layer_conv_1d(filters = 8, kernel_size = 3) |>
-          layer_activation_relu() |>
-          layer_batch_normalization() |>
-          layer_global_average_pooling_1d() |>
-          layer_dense(units = ncol(model_data$train_y), activation = "softmax")
-      },
-      "cnn8" = function() {
-        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
-          layer_conv_1d(filters = 16, kernel_size = 3) |>
-          layer_activation_relu() |>
-          layer_batch_normalization() |>
-          layer_conv_1d(filters = 16, kernel_size = 3) |>
-          layer_activation_relu() |>
-          layer_batch_normalization() |>
-          layer_global_average_pooling_1d() |>
-          layer_dense(units = 32, activation = "relu") |>
-          layer_dense(units = 32, activation = "relu") |>
-          layer_dense(units = ncol(model_data$train_y), activation = "softmax")
-      },
-      "cnn9" = function() {
-        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
-          layer_conv_1d(filters = 16, kernel_size = 3) |>
+          layer_conv_1d(filters = 12, kernel_size = 3) |>
           layer_activation_relu() |>
           layer_batch_normalization() |>
           layer_global_average_pooling_1d() |>
@@ -300,7 +219,7 @@ list(
       file <- str_glue("tmp/best_model/{tar_name()}.h5")
 
       callbacks <- list(
-        callback_early_stopping(patience = 20, min_delta = 0.01, monitor = "accuracy", verbose = 1),
+        callback_early_stopping(patience = 20, min_delta = 0.001, monitor = "loss", verbose = 1),
         callback_tensorboard(log_dir = str_glue("tmp/tensorboard/{tar_name()}")),
         callback_model_checkpoint(save_best_only = TRUE, filepath = file, monitor = "val_accuracy"),
         callback_csv_logger(str_glue("tmp/train_history/{tar_name()}.csv"), separator = ",")
