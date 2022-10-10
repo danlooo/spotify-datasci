@@ -1,5 +1,5 @@
 ---
-title: "Predicting music genre of spotify tracks using deep learning"
+title: "Predicting the music genre of spotify tracks using deep learning"
 author: "Daniel Loos"
 date: today
 editor: visual
@@ -13,17 +13,42 @@ execute:
 ```{r setup, echo=FALSE}
 
 knitr::opts_knit$set(root.dir = here::here())
+knitr::opts_chunk$set(warning = FALSE)
 
 options(warn=-1)
 ```
 
-[This project on GitHub](https://github.com/danlooo/spotify-datasci)
-
 ## Abstract
 
-Music genres feature particular patterns that can be used to predict the genre of a track by analyzing its pitch sequences. The Spotify API provides features for entire tracks, e.g. its loudness or acousticness scores, as well as the sequence of the pitches. About half the the variance of totaling 3600 tracks across techno, rock, jazz and classicsal generes could be explained by these summary features alone. However, there was no strong separation between the genre clusters. Deep learning was then applied to find patterns of the detailed pitch sequence. However, only 30% of the test tracks could be classified correctly using CNN or LSTM architectures.
+Music genres are often composed of particular pitch patterns that can be used for prediction.
+The Spotify API provides features for entire tracks, e.g. its loudness or acousticness scores, as well as the sequence of the individual pitches (notes).
+Totaling 3600 tracks across techno, rock, jazz and classicsal generes were analyzed and used for both classical Machine Learning and Deep Learning modeling methods.
+Validation accuracy of both approaches were similar suggesting that more sophisticated network architectures are needed to increase the model performance.
+
+## Tech stack
+
+- [keras](https://keras.io/) deep learning framework
+- [Tensorflow](https://www.tensorflow.org/) deep learning framework
+- [tidymodels](https://www.tidymodels.org/) machine learning framework
+- [tidyverse](https://www.tidyverse.org/) data wrangling
+- [R targets](https://books.ropensci.org/targets/) pipeline system
+- [spotifyr](https://www.rcharlie.com/spotifyr/) REST API calls
+- [quarto](https://quarto.org/) notebook documentation
+
+Keywords:
+
+- Spatial data analysis
+- deep learning
+- CNN
+- LSTM
+- REST APIs
+
+[This project on GitHub](https://github.com/danlooo/spotify-datasci)
 
 ## ETL pipeline
+
+[Spotify audio analysis API](https://developer.spotify.com/community/showcase/spotify-audio-analysis/) was queried to get summary features, e.g. danceability and accousticness, as well as the individual pitch sequences of 3600 music tracks.
+An R targets pipeline DAG was created to retrieve and transform the data allowing parallelization and caching:
 
 ```{r}
 source("_targets.R")
@@ -70,7 +95,7 @@ Number of tracks after sanity checks:
 nrow(tracks)
 ```
 
-## Track features per term
+## Summary features for prediction
 
 ```{r}
 features <- c("danceability", "acousticness")
@@ -162,53 +187,6 @@ Sanity checks:
 
 There is no clear separation between the genre clusters suggesting a complicated classification task.
 
-## Genre prediction based on summary values
-
-```{r}
-library(tidymodels)
-tar_load(model_data)
-
-train <-
-  track_audio_features |>
-  filter(id %in% rownames(model_data$train_y)) |>
-  left_join(track_searches, by = "id") |>
-  mutate(term = term |> factor()) |>
-  select(term, selected_audio_features)
-
-test <-
-  track_audio_features |>
-  filter(id %in% rownames(model_data$test_y)) |>
-  left_join(track_searches, by = "id") |>
-  mutate(term = term |> factor()) |>
-  select(term, selected_audio_features)
-```
-
-Let's start with a (linear) Support Vector Machine:
-
-```{r}
-svm_linear(mode = "classification") |>
-  fit(term ~ ., data = train) |>#
-  predict(test) |>
-  bind_cols(test) |>
-  mutate(across(c("term", ".pred_class"), ~ factor(.x, levels = test$term |> unique()))) |>
-  accuracy(truth = term, estimate = .pred_class)
-```
-
-A (non-linear) random forest showed similar performance:
-
-```{r}
-rand_forest(mode = "classification") |>
-  fit(term ~ ., data = train) |>
-  predict(test) |>
-  bind_cols(test) |>
-  mutate(across(c("term", ".pred_class"), ~ factor(.x, levels = test$term |> unique()))) |>
-  accuracy(truth = term, estimate = .pred_class)
-```
-
-Test accuracy was very high in general. Can it even improved using the individual pitch sequences instead of relying on just a few summary values describing the entire track?
-
-## Genre prediction based on the pitch sequence
-
 ```{r}
 summary(pca)$importance["Cumulative Proportion","PC2"]
 ```
@@ -231,6 +209,54 @@ features |>
   lm() |>
   summary()
 ```
+
+We use the same set of test samples throughout the entire analysis:
+
+```{r}
+library(tidymodels)
+tar_load(model_data)
+
+train <-
+  track_audio_features |>
+  filter(id %in% rownames(model_data$train_y)) |>
+  left_join(track_searches, by = "id") |>
+  mutate(term = term |> factor()) |>
+  select(term, selected_audio_features)
+
+test <-
+  track_audio_features |>
+  filter(id %in% rownames(model_data$test_y)) |>
+  left_join(track_searches, by = "id") |>
+  mutate(term = term |> factor()) |>
+  select(term, selected_audio_features)
+```
+
+Let's start with a (linear) Support Vector Machine (SVM):
+
+```{r}
+svm_linear(mode = "classification") |>
+  fit(term ~ ., data = train) |>#
+  predict(test) |>
+  bind_cols(test) |>
+  mutate(across(c("term", ".pred_class"), ~ factor(.x, levels = test$term |> unique()))) |>
+  accuracy(truth = term, estimate = .pred_class)
+```
+
+A (non-linear) random forest showed similar performance:
+
+```{r}
+rand_forest(mode = "classification") |>
+  fit(term ~ ., data = train) |>
+  predict(test) |>
+  bind_cols(test) |>
+  mutate(across(c("term", ".pred_class"), ~ factor(.x, levels = test$term |> unique()))) |>
+  accuracy(truth = term, estimate = .pred_class)
+```
+
+The test accuracy was very high in general.
+Can it even be improved using the individual pitch sequences instead of relying on just a few summary features describing the entire track?
+
+## Pitch sequences for prediction
 
 Some features are highly correlated, suggesting redundancy, e.g. :
 
@@ -262,7 +288,8 @@ tracks |>
     labs(y = "Pearson correlation")
 ```
 
-Music is composed of shorter and longer patterns. We can make use of the temporal property by doing convolutions on the time axis while using loudness of pitch frequencies as features.
+Music is composed of shorter and longer patterns.
+We can make use of the temporal property by doing convolutions on the time axis while using loudness of pitch frequencies as features.
 
 [Spotify audio analysis](https://developer.spotify.com/community/showcase/spotify-audio-analysis/) separates the track into many segments and calculates the loudness for each of the 12 pitches (half steps) of the scale.
 
@@ -295,29 +322,48 @@ track_pitches |>
       labs(x = "Time (segment)", y = "Pitch (semitone)", fill = "Median loudness")
 ```
 
+On average, techno tracks uses a variety of different niotes across the time of the track, whereas classical tracks mostly use a few particular notes.
+
+Let's define some model architectures for deep learning:
+
 ```{r}
 tar_load(model_archs)
 
 model_archs$base() |> plot()
 ```
 
+This base model does not utilize the spatialness of the data and is used for comparison.
+
 ```{r}
 model_archs$cnn1() |> plot()
 ```
+
+This is a *sequential* Convolutional Neural Network (CNN).
+
 ```{r}
 model_archs$cnn2() |> plot()
 ```
+
+This is a *non sequential* Convolutional Neural Network (CNN).
+The idea behind this model is that both short and long pitch patterns can be directly used for final prediction.
 
 ```{r}
 model_archs$lstm() |> plot()
 ```
 
-## Evaluate models
+Long Short-Term Memory (LSTM) networks view time as a one directional spatial feature, whereas one can go in both directions with CNNs.
+This makes sense for time series data, like the pitch sequences.
+
+
+## Evaluate deep learning models
 
 ```{r}
 tar_load(evaluations)
 evaluations
 ```
+
+All models outperformed the random guess with an expected accuracy of 25%.
+The simple CNN1 had the highest accuracy in the validation set.
 
 ```{r}
 evaluations |>
@@ -334,3 +380,9 @@ evaluations |>
 
 The base and CNN1 model generalize well on the external validation samples, whereas CNN2 is affected by over-fitting.
 This is maybe due to the high number of trainable parameters.
+
+## Conclusion
+
+CNN1 outperformed a linear SVM but its test accuracy was lower compared to a random forest.
+Regarding model complexity and computational effort for training, the analysis suggest that depp learning model might not be worth the efforts to predict the music genre if meaningful summary features, e.g. danceability and accousticness are available.
+However, using more sophisticated deep learning architectures, new deep learning models might be developed in the future to improve the validation accuracy even further.
