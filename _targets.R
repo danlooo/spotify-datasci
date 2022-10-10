@@ -129,31 +129,47 @@ list(
       filter(id %in% valid_tracks) |>
       unnest(pitches) |>
       group_by(id) |>
-      mutate(step = row_number()) |>
-      pivot_longer(-c(id, step))
+      mutate(segment = row_number()) |>
+      pivot_longer(-c(id, segment), names_to = "pitch_name") |>
+      arrange(pitch_name, segment, id) # array fills column-wise
+
+    x_train_long <- x_long |> filter(id %in% valid_train_samples)
+    x_test_long <- x_long |> filter(id %in% valid_test_samples)
 
     x_train_array <-
-      x_long |>
-      filter(id %in% valid_train_samples) |>
+      x_train_long |>
       pull(value) |>
-      array(dim = c(
-        valid_train_samples |> length(),
-        x_long$step |> unique() |> length(),
-        x_long$name |> unique() |> length()
-      ))
+      array(
+        dim = c(
+          x_train_long$id |> unique() |> length(),
+          x_train_long$segment |> unique() |> length(),
+          x_train_long$pitch_name |> unique() |> length()
+        ),
+        dimnames = list(
+          "id" = x_train_long$id |> unique(),
+          "segment" = x_train_long$segment |> unique(),
+          "pitch_name" = x_train_long$pitch_name |> unique()
+        )
+      )
 
     x_test_array <-
-      x_long |>
-      filter(id %in% valid_test_samples) |>
+      x_test_long |>
       pull(value) |>
-      array(dim = c(
-        valid_test_samples |> length(),
-        x_long$step |> unique() |> length(),
-        x_long$name |> unique() |> length()
-      ))
+      array(
+        dim = c(
+          x_test_long$id |> unique() |> length(),
+          x_test_long$segment |> unique() |> length(),
+          x_test_long$pitch_name |> unique() |> length()
+        ),
+        dimnames = list(
+          "id" = x_test_long$id |> unique(),
+          "segment" = x_test_long$segment |> unique(),
+          "pitch_name" = x_test_long$pitch_name |> unique()
+        )
+      )
 
     y_train <-
-      tibble(id = x_long$id |> unique()) |>
+      tibble(id = x_train_long$id |> unique()) |>
       filter(id %in% valid_train_samples) |>
       left_join(track_searches) |>
       select(id, term) |>
@@ -168,7 +184,7 @@ list(
       as.matrix()
 
     y_test <-
-      tibble(id = x_long$id |> unique()) |>
+      tibble(id = x_test_long$id |> unique()) |>
       filter(id %in% valid_test_samples) |>
       left_join(track_searches) |>
       select(id, term) |>
@@ -187,22 +203,26 @@ list(
   tar_target(model_archs, {
     list(
       "base" = function() {
-        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
+        # base MLP ignoring spatial aspects
+        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3], name = "base") |>
+          layer_global_average_pooling_1d() |>
           layer_flatten() |>
           layer_dense(units = 4, activation = "relu") |>
-          layer_activation_relu() |>
+          layer_activation_selu() |>
           layer_dense(units = ncol(model_data$train_y), activation = "softmax")
       },
       "lstm" = function() {
-        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
+        # LSTM to model unidirectional of time series
+        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3], name = "lstm") |>
           layer_conv_1d(filters = 1, kernel_size = 5) |>
           layer_lstm(units = 32) |>
           layer_dense(units = 32) |>
-          layer_activation_relu() |>
+          layer_activation_selu() |>
           layer_dense(units = ncol(model_data$train_y), activation = "softmax")
       },
-      "cnn4" = function() {
-        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3]) |>
+      "cnn1" = function() {
+        # sequential CNN
+        keras_model_sequential(input_shape = dim(model_data$train_x)[2:3], name = "cnn1") |>
           layer_conv_1d(filters = 12, kernel_size = 3) |>
           layer_activation_relu() |>
           layer_batch_normalization() |>
@@ -211,6 +231,21 @@ list(
           layer_batch_normalization() |>
           layer_global_average_pooling_1d() |>
           layer_dense(units = ncol(model_data$train_y), activation = "softmax")
+      },
+      "cnn2" = function() {
+        # CNN that can pick patterns of various sizes
+        input <- layer_input(shape = dim(model_data$train_x)[2:3])
+        c1 <- layer_conv_1d(filters = 6, kernel_size = 11, name = "small_patterns")(input)
+        c2 <- layer_conv_1d(filters = 6, kernel_size = 51, name = "medium_patterns")(input)
+        c3 <- layer_conv_1d(filters = 6, kernel_size = 101, name = "big_patterns")(input)
+        agg1 <- layer_global_max_pooling_1d(c1, name = "small_pool")
+        agg2 <- layer_global_max_pooling_1d(c2, name = "medium_pool")
+        agg3 <- layer_global_max_pooling_1d(c3, name = "big_pool")
+        agg <- layer_concatenate(list(agg1, agg2, agg3))
+        cl1 <- layer_dense(units = 12)(agg)
+        cl2 <- layer_activation_selu(cl1)
+        output <- layer_dense(units = ncol(model_data$train_y), activation = "softmax")(cl2)
+        keras_model(input, output, name = "cnn2")
       }
     )
   }),
@@ -219,7 +254,7 @@ list(
       file <- str_glue("tmp/best_model/{tar_name()}.h5")
 
       callbacks <- list(
-        callback_early_stopping(patience = 20, min_delta = 0.001, monitor = "loss", verbose = 1),
+        callback_early_stopping(patience = 20, min_delta = 0.001, monitor = "val_loss", verbose = 1),
         callback_tensorboard(log_dir = str_glue("tmp/tensorboard/{tar_name()}")),
         callback_model_checkpoint(save_best_only = TRUE, filepath = file, monitor = "val_accuracy"),
         callback_csv_logger(str_glue("tmp/train_history/{tar_name()}.csv"), separator = ",")
@@ -234,8 +269,8 @@ list(
           y = model_data$train_y,
           callbacks = callbacks,
           epochs = 250,
-          verbose = 0,
-          validation_split = 0.2
+          verbose = 1,
+          validation_data = list(model_data$test_x, model_data$test_y)
         )
 
       file

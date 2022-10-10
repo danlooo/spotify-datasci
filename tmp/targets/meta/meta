@@ -1,9 +1,9 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
-.Random.seed|object|39ebbd7e33567bcc|||||||||||||||
+.Random.seed|object|5a63ef517a841db4|||||||||||||||
 access_token|object|b8b609f9f75a7668|||||||||||||||
 cnn|stem|1a08554f5f80b6e3|74c78384da52ab7b|2257931b151bc046|60168758||t19271.7555324241s|1e85e50b3bd5846b|284|rds|local|vector|||16.001||
 cnn_data|stem|da83ca8cb664eb1e|8c267e73a8817e44|74813eaa0d88f663|-344626950||t19272.6064112349s|69b07c887f7b32dc|10123875|rds|local|vector|||3.252||
-evaluations|stem|3603413209e1b3fc|ec3b1892bd95de15|9ff65586561a5f78|-226448037||t19273.807049066s|837cfb760bca86eb|326|rds|local|vector|||2.688|cols is now required when using unnest.Please use cols  cdata|
+evaluations|stem|321075c8cecbe834|ec3b1892bd95de15|ac25f678744b36c1|-226448037||t19275.4368572164s|001fa5a0c082fe27|364|rds|local|vector|||0.76|cols is now required when using unnest.Please use cols  cdata|
 evaluations_1cabccca|branch|3331def24de19e6d|252e69d1681ee17d|0da52ee7d009fcb2|-1399438313||t19272.5627628578s|53d67a509bd209ee|171|rds|local|vector|evaluations||0.33||
 evaluations_32a7e209|branch|68498ec8832e28fc|252e69d1681ee17d|bc781a34762b17f0|-1187019492||t19272.5437553336s|274be9fab5df2fde|169|rds|local|vector|evaluations||5.246||
 evaluations_68f08e3a|branch||1191d2e331936cf2|3fef037569dc7eb7|1528573724||t19272.4807730394s||0|rds|local|vector|evaluations||0.005||no applicable method for evaluate applied to an object of class character
@@ -16,12 +16,14 @@ fits_3e44a296|branch|7a5095d1c2e1a69e|04af734946347b62|24e680c1c269c7dd|-7902932
 fits_d1098f3a|branch|9333d9e944094ac3|04af734946347b62|7b7b76f3c56c1c91|797173135||t19272.4646400644s|53f1aa3197376580|2483488|keras|local|vector|fits||9.133||
 fits_d3666d82|branch|3f7fda63a877ed97|e71d5cc4b3c38ad7|95ec19f5f37ad529|578583584||t19272.4487857897s|bb1a77f8921b1df1|1997|rds|local|vector|fits||11.309||
 foo|stem|036dac1247a16961|9d38591f4e970354|ef46db3751d8e999|596015325||t19264.4740214302s|a96c250e4b19e03e|54|rds|local|vector|||0.002||
-model_archs|stem|daa94f224c584900|fd09d6409cbdc69c|cfd3b871dc7c1ed7|-72294211||t19273.7527611406s|f839181a8610f110|53212651|rds|local|vector||model_archs_28ba2f24*model_archs_5aed1368*model_archs_4d15d48a|0||
-model_data|stem|2ae131d6fbf6f1f1|fa0c84f96b17564a|5358d9ef36350138|-495503059||t19273.5398494804s|7ed4f5b0784185f3|53212096|rds|local|vector|||95.705||
-model_fits|pattern|da79e04a93faba8c|5c37098361ca6832||-553083469||||423432|file|local|vector||model_fits_76270120*model_fits_9d72951b*model_fits_fd01a56c|4685.462||
+model_archs|stem|71f780d3fa1930d0|c8f85a00fbecedbe|a5271b5ceed5adb0|-72294211||t19275.4349891619s|b2a9b95f8a432f36|62610914|rds|local|vector||model_archs_62ac9c26*model_archs_234ce7a7*model_archs_b325f5dd*model_archs_fa0d9319|0.001||
+model_data|stem|df5b89496ffdc5e7|adb8b06a7a12b4c1|f284817dbf827940|-495503059||t19275.3998109606s|6d0c10f04f3a88db|62609975|rds|local|vector|||312.615||
+model_fits|pattern|3529afd1b28fd700|d533e48c49706311||-553083469||||60808|file|local|vector||model_fits_90ac26ad*model_fits_1a00e901*model_fits_a4330c15*model_fits_fe0655a7|157.616||
 model_fits_0b20991f|branch|654a435d09071e30|fecf26bdd585cebe|01b81eebb0429366|-573576235|tmp/best_model/model_fits_0b20991f.h5|t19273.4896210488s|d2701fbed135e8f0|88456|file|local|vector|model_fits||129.447||
 model_fits_0c84c7af|branch|07af25675014d5a7|20d815b0244b5a8d|e7911f15104482f7|954314837|tmp/best_model/model_fits_0c84c7af.h5|t19272.6452693302s|914e8f1b3d1687c6|1007080|file|local|vector|model_fits||638.02||
+model_fits_0f030954|branch|f5abdf2d177f4cc5|d533e48c49706311|52196bbd23cda9cf|-340555121|tmp/best_model/model_fits_0f030954.h5|t19275.4171047904s|50e967aa824ecafd|60792|file|local|vector|model_fits||155.041||
 model_fits_16526466|branch|63888a27be05858a|20d815b0244b5a8d|70d6767ed8e9c1da|-979588458|tmp/best_model/model_fits_16526466.h5|t19272.6119686133s|072358fb3ed7dcd8|93488|file|local|vector|model_fits||38.045||
+model_fits_1a00e901|branch|4e64cce650b0ee5d|d533e48c49706311|a5bb0deaf31ef875|-653222077|tmp/best_model/model_fits_1a00e901.h5|t19275.4047233673s|fbb4b77688f8ba11|89632|file|local|vector|model_fits||1300.355||
 model_fits_26c60c7b|branch|626cf8ef443c6a51|fecf26bdd585cebe|cd1a9591d377e072|313844534|tmp/best_model/model_fits_26c60c7b.h5|t19273.4532050818s|6f0b51936c740f01|1650456|file|local|vector|model_fits||1081.722||
 model_fits_2de45111|branch|2c2bcfb04b5bfa20|20d815b0244b5a8d|d448609c8e9a23d9|1899456315|tmp/best_model/model_fits_2de45111.h5|t19273.4108084912s|20334cef36b24680|256288|file|local|vector|model_fits||8.933||
 model_fits_3260dec7|branch|d686b7f116844ec6|fecf26bdd585cebe|4ffba5525d0ae1cb|1420006819|tmp/best_model/model_fits_3260dec7.h5|t19273.4732518705s|6f0b51936c740f01|1650456|file|local|vector|model_fits||1373.178||
@@ -36,18 +38,21 @@ model_fits_661e7e48|branch|652f05b4af673f06|fecf26bdd585cebe|943a0a8aa9ef215b|-3
 model_fits_6f5fecc5|branch|a006d33feb8dabf0|fecf26bdd585cebe|7fc89c9a393b656b|526436418|tmp/best_model/model_fits_6f5fecc5.h5|t19273.4868879047s|5399bd7aae8b99ed|285784|file|local|vector|model_fits||394.965||
 model_fits_71f53493|branch|0d799299f851d2b6|fecf26bdd585cebe|eb1f3ecf1bf1510f|-1136372469|tmp/best_model/model_fits_71f53493.h5|t19273.4837490612s|a5f606a6ea61fd9d|63576|file|local|vector|model_fits||37.475||
 model_fits_74de6a7d|branch|084b4f6168e73e80|5c37098361ca6832|c2bf8f5b63150a43|-1619205978|tmp/best_model/model_fits_74de6a7d.h5|t19273.7268803924s|20334cef36b24680|256288|file|local|vector|model_fits||14.048||
-model_fits_76270120|branch|31226ab222e249ab|5c37098361ca6832|d8395798bfd15495|972950953|tmp/best_model/model_fits_76270120.h5|t19273.7528673028s|4727bf1b4568e151|333896|file|local|vector|model_fits||11.731||
+model_fits_76270120|branch|bde4d03516a68604|f324d656aa80c18e|d8395798bfd15495|972950953|tmp/best_model/model_fits_76270120.h5|t19274.6456259188s|4727bf1b4568e151|333896|file|local|vector|model_fits||25.628||
 model_fits_77e305ae|branch|c5e75e3a1755a797|fecf26bdd585cebe|03a6ec9975c24def|539298876|tmp/best_model/model_fits_77e305ae.h5|t19273.4654549988s|f2538d2de2d81dad|56920|file|local|vector|model_fits||33.676||
 model_fits_78c5bd04|branch|4071055d726e5a1f|fecf26bdd585cebe|3ea7a5aeadec5090|1696393272|tmp/best_model/model_fits_78c5bd04.h5|t19273.4660101678s|f99d11474682d15f|38432|file|local|vector|model_fits||21.331||
 model_fits_7ee0a8d2|branch|86e9a9843c76d2ec|fecf26bdd585cebe|17d9554891db647a|1477980143|tmp/best_model/model_fits_7ee0a8d2.h5|t19273.4616652299s|8488b31dccedd54c|107696|file|local|vector|model_fits||531.428||
 model_fits_82d89e84|branch|a307dd7a4cf7874c|301d5b1e3951d7f2|dabbb38bfaf6c25d|-1972845354|tmp/best_model/model_fits_82d89e84.h5|t19273.5479945778s|8488b31dccedd54c|107696|file|local|vector|model_fits||2371.652||
 model_fits_8416e8e9|branch|e50c05f21db39e18|20d815b0244b5a8d|811fd70ea5c01ca1|738538509|tmp/best_model/model_fits_8416e8e9.h5|t19272.6313792105s|257ba2e8868ceef8|6261240|file|local|vector|model_fits||2143.379||
+model_fits_90ac26ad|branch|516d2f5011876270|d533e48c49706311|37243bfabf0a5932|-1099537961|tmp/best_model/model_fits_90ac26ad.h5|t19275.400428713s|52370ddcefabf400|27640|file|local|vector|model_fits||33.081||
 model_fits_9a7f1b15|branch|f8f56d907d9a0f9c|20d815b0244b5a8d|8a75855da4a0f261|913742121|tmp/best_model/model_fits_9a7f1b15.h5|t19272.6635002218s|5bd13f4b06c5baa6|188496|file|local|vector|model_fits||758.91||
 model_fits_9c75acce|branch|ade22b9816ab9ab9|fecf26bdd585cebe|cffc97d1d41718fe|-138504281|tmp/best_model/model_fits_9c75acce.h5|t19273.4610883529s|f99d11474682d15f|38432|file|local|vector|model_fits||35.816||
-model_fits_9d72951b|branch|dbc924c90436f7fa|5c37098361ca6832|a7347b30ed992032|-373124666|tmp/best_model/model_fits_9d72951b.h5|t19273.777350045s|1854552fec8934fc|89536|file|local|vector|model_fits||4673.731||
+model_fits_9cd67ef9|branch|293502621cbc4a65|d533e48c49706311|a00d7397dd368c53|1553070246|tmp/best_model/model_fits_9cd67ef9.h5|t19275.4331329551s|0872b9bc0dcf8d61|60776|file|local|vector|model_fits||177.543||
+model_fits_9d72951b|branch|dbc924c90436f7fa|f324d656aa80c18e|a7347b30ed992032|-373124666|tmp/best_model/model_fits_9d72951b.h5|t19273.777350045s||89536|file|local|vector|model_fits||386.71|Error encountered when flushing python buffers sys.stderr and sys.stdout|BrokenPipeError Errno 32 Broken pipe
 model_fits_9ea32a93|branch|d724ef9fc7ebb058|20d815b0244b5a8d|22bb473bbaaf76d0|-1292906158|tmp/best_model/model_fits_9ea32a93.h5|t19272.6257263553s|0838935cde5292e8|1650592|file|local|vector|model_fits||1109.446||
 model_fits_9f0a5401|branch|3ab028c1c12823b4|20d815b0244b5a8d|836fe15fb2be9f09|-125481971|tmp/best_model/model_fits_9f0a5401.h5|t19272.6495447536s|07989d538e151a1e|56712|file|local|vector|model_fits||20.72||
 model_fits_a11bfb6c|branch|453b1f84b55555d5|20d815b0244b5a8d|2d7837f2e5e11ea1|212421311|tmp/best_model/model_fits_a11bfb6c.h5|t19272.648301596s|d2701fbed135e8f0|88456|file|local|vector|model_fits||47.677||
+model_fits_a4330c15|branch|b8f65844e3b13b42|d533e48c49706311|acc84998e4564c47|2080569764|tmp/best_model/model_fits_a4330c15.h5|t19275.4368202238s|73997ca2a872b7df|60808|file|local|vector|model_fits||157.616||
 model_fits_b46ba421|branch|929499a3293e4b75|fecf26bdd585cebe|9ad24cb0f3c2dbda|1871901875|tmp/best_model/model_fits_b46ba421.h5|t19273.4834113609s|f99d11474682d15f|38432|file|local|vector|model_fits||47.414||
 model_fits_b62181aa|branch|5ae35c56f08a7f38|fecf26bdd585cebe|59eb4f12351fe164|207247599|tmp/best_model/model_fits_b62181aa.h5|t19273.4480322321s|072358fb3ed7dcd8|93488|file|local|vector|model_fits||54.392||
 model_fits_bb192414|branch|0975bd25492e460f|fecf26bdd585cebe|0f0867d466a7b052|-2136650046|tmp/best_model/model_fits_bb192414.h5|t19273.490139732s|f2538d2de2d81dad|56920|file|local|vector|model_fits||21.593||
@@ -60,6 +65,7 @@ model_fits_e4a2b5ee|branch|e049bdf85ea0dd5a|fecf26bdd585cebe|d7beb04bd63f4046|-4
 model_fits_eb130c02|branch|cd7ecae3e5dc4660|20d815b0244b5a8d|c30930a76644f7f0|1580357075|tmp/best_model/model_fits_eb130c02.h5|t19272.6390580321s|4445199aa8b6821a|63368|file|local|vector|model_fits||42.969||
 model_fits_f7290ccd|branch|8cac8bc43ab0277a|fecf26bdd585cebe|714f46255288b0d9|-752684293|tmp/best_model/model_fits_f7290ccd.h5|t19273.4647511172s|d2701fbed135e8f0|88456|file|local|vector|model_fits||131.256||
 model_fits_fd01a56c|branch|d9b314da903bffb8|5c37098361ca6832|7faf1093785dc527|-864260304|tmp/best_model/model_fits_fd01a56c.h5|t19273.7451085235s|19d0697db5219e58|61016|file|local|vector|model_fits||233.488||
+model_fits_fe0655a7|branch|e3160918985f5462|d533e48c49706311|923d0d849758554a|1404753227|tmp/best_model/model_fits_fe0655a7.h5|t19275.4186059215s|13d7bdfd0b8e2901|150032|file|local|vector|model_fits||217.266||
 model_fits_fe51a641|branch|04d484b0cd8de0d6|fecf26bdd585cebe|7b7bc068719eed19|-1670427237|tmp/best_model/model_fits_fe51a641.h5|t19273.4667085846s|072358fb3ed7dcd8|93488|file|local|vector|model_fits||104.537||
 model_fits_fe7e4e11|branch|85ea49035e491967|fecf26bdd585cebe|f2db46bdf4ab8190|1914797594|tmp/best_model/model_fits_fe7e4e11.h5|t19273.4450691941s|8488b31dccedd54c|107696|file|local|vector|model_fits||407.321||
 model_fits_fef20f6d|branch|3744e4f1abb4f6d9|301d5b1e3951d7f2|68f7340e13b5f020|2036690636|tmp/best_model/model_fits_fef20f6d.h5|t19273.5727970979s|072358fb3ed7dcd8|93488|file|local|vector|model_fits||379.009||
