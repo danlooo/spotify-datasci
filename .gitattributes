@@ -1,1 +1,2 @@
+*.html linguist-detectable=false
 index_files/** linguist-detectable=false
