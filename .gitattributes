@@ -1,2 +1,1 @@
-*.html linguist-detectable=false
-*.htm linguist-detectable=false
+index_files/* linguist-vendored=false
